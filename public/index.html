@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Extinction Risk Poll</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #14171f;
+    --border: #262b36;
+    --text: #e8eaed;
+    --muted: #9aa3b2;
+    --accent: #ff5c5c;
+    --bar: #3a4150;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 50% -10%, #1a1f2b 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 36px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 22px;
+    line-height: 1.4;
+    font-weight: 600;
+    margin: 0 0 28px;
+  }
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  button.option {
+    text-align: left;
+    background: #1b1f29;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 600;
+    padding: 18px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .15s, transform .05s, background .15s;
+  }
+  button.option:hover { border-color: var(--accent); background: #20252f; }
+  button.option:active { transform: scale(0.99); }
+  .results { display: none; flex-direction: column; gap: 18px; }
+  .result-row .label {
+    display: flex; justify-content: space-between;
+    font-size: 15px; margin-bottom: 8px; color: var(--muted);
+  }
+  .result-row .label strong { color: var(--text); }
+  .track {
+    background: var(--bar); border-radius: 8px; height: 14px; overflow: hidden;
+  }
+  .fill {
+    height: 100%; width: 0; background: linear-gradient(90deg, #ff7a7a, var(--accent));
+    border-radius: 8px; transition: width .6s ease;
+  }
+  .total { color: var(--muted); font-size: 13px; text-align: center; margin-top: 8px; }
+  .footnote { color: var(--muted); font-size: 12px; margin-top: 26px; line-height: 1.5; }
+  .reset {
+    background: none; border: none; color: var(--accent); cursor: pointer;
+    font-size: 13px; text-decoration: underline; padding: 0; margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">One question</div>
+    <h1>What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?</h1>
+
+    <div class="options" id="options">
+      <button class="option" data-bucket="lt10">Less than 10%</button>
+      <button class="option" data-bucket="10to25">10% &ndash; 25%</button>
+      <button class="option" data-bucket="gt25">Greater than 25%</button>
+    </div>
+
+    <div class="results" id="results">
+      <div class="result-row" data-bucket="lt10">
+        <div class="label"><span>Less than 10%</span><strong><span class="pct">0%</span></strong></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="result-row" data-bucket="10to25">
+        <div class="label"><span>10% &ndash; 25%</span><strong><span class="pct">0%</span></strong></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="result-row" data-bucket="gt25">
+        <div class="label"><span>Greater than 25%</span><strong><span class="pct">0%</span></strong></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="total" id="total"></div>
+      <button class="reset" id="reset">Change my answer</button>
+    </div>
+
+    <div class="footnote">Your response is recorded anonymously. Results update live.</div>
+  </div>
+
+<script>
+  const optionsEl = document.getElementById("options");
+  const resultsEl = document.getElementById("results");
+  const totalEl = document.getElementById("total");
+  const labels = { lt10: "Less than 10%", "10to25": "10% – 25%", gt25: "Greater than 25%" };
+
+  function render(votes) {
+    const total = (votes.lt10 || 0) + (votes["10to25"] || 0) + (votes.gt25 || 0);
+    document.querySelectorAll(".result-row").forEach(row => {
+      const b = row.dataset.bucket;
+      const count = votes[b] || 0;
+      const pct = total ? Math.round((count / total) * 100) : 0;
+      row.querySelector(".fill").style.width = pct + "%";
+      row.querySelector(".pct").textContent = pct + "%";
+    });
+    totalEl.textContent = total + (total === 1 ? " response" : " responses");
+  }
+
+  function showResults() {
+    optionsEl.style.display = "none";
+    resultsEl.style.display = "flex";
+  }
+
+  async function loadResults() {
+    const res = await fetch("/api/results");
+    render(await res.json());
+  }
+
+  optionsEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button.option");
+    if (!btn) return;
+    const bucket = btn.dataset.bucket;
+    localStorage.setItem("voted", bucket);
+    const res = await fetch("/api/vote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucket })
+    });
+    render(await res.json());
+    showResults();
+  });
+
+  document.getElementById("reset").addEventListener("click", () => {
+    localStorage.removeItem("voted");
+    resultsEl.style.display = "none";
+    optionsEl.style.display = "flex";
+  });
+
+  if (localStorage.getItem("voted")) {
+    showResults();
+    loadResults();
+  }
+</script>
+</body>
+</html>
