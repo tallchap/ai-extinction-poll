@@ -2,9 +2,15 @@ services:
   - type: web
     name: ai-extinction-poll
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm install
     startCommand: npm start
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
+      - key: RENDER_DISK_PATH
+        value: /var/data
       - key: NODE_VERSION
         value: "20"
