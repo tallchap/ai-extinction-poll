@@ -4,7 +4,7 @@ A single-question poll site. Asks:
 
 > What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?
 
-Three buckets: **< 10%**, **10–25%**, **> 25%**. Votes are tallied anonymously and results display as live bars.
+Respondents **type a number** (their P(doom) %, 0–100). Results display as a live **vertical bar chart** of three buckets — **< 10%**, **10–25%**, **> 25%** — alongside the **mean** and **median** P(doom). A reset button at the bottom clears all entries. A QR code (`public/qr.png`, also shown in-page) links to the live site for audiences to scan.
 
 ## Run locally
 

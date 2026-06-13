@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AI Extinction Risk Poll</title>
+<title>P(doom) Poll</title>
 <style>
   :root {
     --bg: #0b0d12;
@@ -12,7 +12,7 @@
     --text: #e8eaed;
     --muted: #9aa3b2;
     --accent: #ff5c5c;
-    --bar: #3a4150;
+    --good: #4ea1ff;
   }
   * { box-sizing: border-box; }
   body {
@@ -22,152 +22,248 @@
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 24px;
+    padding: 24px 16px 0;
   }
   .card {
     width: 100%;
-    max-width: 620px;
+    max-width: 640px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 40px 36px;
+    padding: 36px 32px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   }
   .eyebrow {
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-size: 12px;
-    color: var(--accent);
-    font-weight: 700;
-    margin-bottom: 16px;
+    text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px;
+    color: var(--accent); font-weight: 700; margin-bottom: 14px;
   }
-  h1 {
-    font-size: 22px;
-    line-height: 1.4;
-    font-weight: 600;
-    margin: 0 0 28px;
+  h1 { font-size: 21px; line-height: 1.45; font-weight: 600; margin: 0 0 26px; }
+
+  /* input view */
+  .inputrow { display: flex; align-items: stretch; gap: 10px; }
+  .pct-wrap { position: relative; flex: 1; }
+  input[type=number] {
+    width: 100%; font-size: 30px; font-weight: 700; text-align: center;
+    background: #1b1f29; color: var(--text); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 40px 16px 16px; -moz-appearance: textfield;
   }
-  .options { display: flex; flex-direction: column; gap: 12px; }
-  button.option {
-    text-align: left;
-    background: #1b1f29;
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 17px;
-    font-weight: 600;
-    padding: 18px 20px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: border-color .15s, transform .05s, background .15s;
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .pct-sign { position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    font-size: 22px; font-weight: 700; color: var(--muted); pointer-events: none; }
+  button.submit {
+    background: var(--accent); color: #150505; border: none; font-size: 17px; font-weight: 700;
+    padding: 0 26px; border-radius: 12px; cursor: pointer; transition: filter .15s, transform .05s;
   }
-  button.option:hover { border-color: var(--accent); background: #20252f; }
-  button.option:active { transform: scale(0.99); }
-  .results { display: none; flex-direction: column; gap: 18px; }
-  .result-row .label {
-    display: flex; justify-content: space-between;
-    font-size: 15px; margin-bottom: 8px; color: var(--muted);
+  button.submit:hover { filter: brightness(1.08); }
+  button.submit:active { transform: scale(0.98); }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .error { color: var(--accent); font-size: 13px; margin-top: 12px; min-height: 16px; }
+
+  /* results view */
+  .results { display: none; }
+  .stats { display: flex; gap: 14px; margin-bottom: 28px; }
+  .stat {
+    flex: 1; background: #1b1f29; border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px; text-align: center;
   }
-  .result-row .label strong { color: var(--text); }
-  .track {
-    background: var(--bar); border-radius: 8px; height: 14px; overflow: hidden;
-  }
-  .fill {
-    height: 100%; width: 0; background: linear-gradient(90deg, #ff7a7a, var(--accent));
-    border-radius: 8px; transition: width .6s ease;
-  }
-  .total { color: var(--muted); font-size: 13px; text-align: center; margin-top: 8px; }
-  .footnote { color: var(--muted); font-size: 12px; margin-top: 26px; line-height: 1.5; }
-  .reset {
-    background: none; border: none; color: var(--accent); cursor: pointer;
-    font-size: 13px; text-decoration: underline; padding: 0; margin-top: 6px;
-  }
+  .stat .num { font-size: 34px; font-weight: 800; color: var(--good); }
+  .stat .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
+
+  .chart { display: flex; align-items: flex-end; justify-content: space-around;
+    gap: 18px; height: 240px; padding: 0 6px; border-bottom: 2px solid var(--border); }
+  .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    flex: 1; height: 100%; }
+  .col .count { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .bar { width: 100%; max-width: 90px; background: linear-gradient(180deg, #ff7a7a, var(--accent));
+    border-radius: 8px 8px 0 0; min-height: 3px; transition: height .6s ease; }
+  .xlabels { display: flex; justify-content: space-around; gap: 18px; margin-top: 10px; }
+  .xlabels .xl { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .total { color: var(--muted); font-size: 13px; text-align: center; margin-top: 22px; }
+  .revote { display: block; margin: 16px auto 0; background: none; border: 1px solid var(--border);
+    color: var(--text); cursor: pointer; font-size: 13px; padding: 8px 16px; border-radius: 8px; }
+  .revote:hover { border-color: var(--accent); }
+
+  /* QR + reset */
+  .tools { width: 100%; max-width: 640px; text-align: center; margin: 18px 0; }
+  .linkbtn { background: none; border: none; color: var(--good); cursor: pointer;
+    font-size: 13px; text-decoration: underline; }
+  #qrbox { display: none; margin-top: 14px; }
+  #qrbox img { width: 220px; height: 220px; background: #fff; padding: 12px; border-radius: 12px; }
+  #qrbox .url { color: var(--muted); font-size: 12px; margin-top: 8px; word-break: break-all; }
+
+  .footer { width: 100%; max-width: 640px; text-align: center; margin-top: auto;
+    padding: 40px 0 28px; }
+  #reset { background: none; border: none; color: #5a6170; cursor: pointer;
+    font-size: 12px; text-decoration: underline; }
+  #reset.armed { color: var(--accent); font-weight: 700; }
 </style>
 </head>
 <body>
   <div class="card">
-    <div class="eyebrow">One question</div>
+    <div class="eyebrow">P(doom)</div>
     <h1>What probability do you put on future AI advances causing human extinction or similarly permanent and severe disempowerment of the human species within the next 100 years?</h1>
 
-    <div class="options" id="options">
-      <button class="option" data-bucket="lt10">Less than 10%</button>
-      <button class="option" data-bucket="10to25">10% &ndash; 25%</button>
-      <button class="option" data-bucket="gt25">Greater than 25%</button>
+    <div class="inputview" id="inputview">
+      <div class="inputrow">
+        <div class="pct-wrap">
+          <input type="number" id="value" min="0" max="100" step="0.1" placeholder="0&ndash;100" inputmode="decimal" />
+          <span class="pct-sign">%</span>
+        </div>
+        <button class="submit" id="submit">Submit</button>
+      </div>
+      <div class="hint">Enter your probability as a number from 0 to 100.</div>
+      <div class="error" id="error"></div>
     </div>
 
     <div class="results" id="results">
-      <div class="result-row" data-bucket="lt10">
-        <div class="label"><span>Less than 10%</span><strong><span class="pct">0%</span></strong></div>
-        <div class="track"><div class="fill"></div></div>
+      <div class="stats">
+        <div class="stat"><div class="num" id="mean">&mdash;</div><div class="lbl">Mean P(doom)</div></div>
+        <div class="stat"><div class="num" id="median">&mdash;</div><div class="lbl">Median P(doom)</div></div>
       </div>
-      <div class="result-row" data-bucket="10to25">
-        <div class="label"><span>10% &ndash; 25%</span><strong><span class="pct">0%</span></strong></div>
-        <div class="track"><div class="fill"></div></div>
+      <div class="chart" id="chart">
+        <div class="col" data-bucket="lt10"><div class="count">0</div><div class="bar"></div></div>
+        <div class="col" data-bucket="10to25"><div class="count">0</div><div class="bar"></div></div>
+        <div class="col" data-bucket="gt25"><div class="count">0</div><div class="bar"></div></div>
       </div>
-      <div class="result-row" data-bucket="gt25">
-        <div class="label"><span>Greater than 25%</span><strong><span class="pct">0%</span></strong></div>
-        <div class="track"><div class="fill"></div></div>
+      <div class="xlabels">
+        <div class="xl">&lt; 10%</div>
+        <div class="xl">10&ndash;25%</div>
+        <div class="xl">&gt; 25%</div>
       </div>
       <div class="total" id="total"></div>
-      <button class="reset" id="reset">Change my answer</button>
+      <button class="revote" id="revote">Submit another answer</button>
     </div>
+  </div>
 
-    <div class="footnote">Your response is recorded anonymously. Results update live.</div>
+  <div class="tools">
+    <button class="linkbtn" id="qrtoggle">Show QR code to share</button>
+    <div id="qrbox">
+      <img src="/qr.png" alt="QR code to this poll" />
+      <div class="url" id="qrurl"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button id="reset">Reset all entries</button>
   </div>
 
 <script>
-  const optionsEl = document.getElementById("options");
+  const inputview = document.getElementById("inputview");
   const resultsEl = document.getElementById("results");
+  const valueEl = document.getElementById("value");
+  const errorEl = document.getElementById("error");
+  const meanEl = document.getElementById("mean");
+  const medianEl = document.getElementById("median");
   const totalEl = document.getElementById("total");
-  const labels = { lt10: "Less than 10%", "10to25": "10% – 25%", gt25: "Greater than 25%" };
+  let pollTimer = null;
 
-  function render(votes) {
-    const total = (votes.lt10 || 0) + (votes["10to25"] || 0) + (votes.gt25 || 0);
-    document.querySelectorAll(".result-row").forEach(row => {
-      const b = row.dataset.bucket;
-      const count = votes[b] || 0;
-      const pct = total ? Math.round((count / total) * 100) : 0;
-      row.querySelector(".fill").style.width = pct + "%";
-      row.querySelector(".pct").textContent = pct + "%";
-    });
-    totalEl.textContent = total + (total === 1 ? " response" : " responses");
+  function fmt(n) {
+    if (n === null || n === undefined) return "—";
+    return (Math.round(n * 10) / 10).toString() + "%";
   }
 
-  function showResults() {
-    optionsEl.style.display = "none";
-    resultsEl.style.display = "flex";
+  function render(d) {
+    const counts = [d.buckets.lt10, d.buckets["10to25"], d.buckets.gt25];
+    const max = Math.max(1, ...counts);
+    document.querySelectorAll(".col").forEach((col) => {
+      const b = col.dataset.bucket;
+      const c = d.buckets[b] || 0;
+      col.querySelector(".count").textContent = c;
+      col.querySelector(".bar").style.height = Math.round((c / max) * 100) + "%";
+    });
+    meanEl.textContent = fmt(d.mean);
+    medianEl.textContent = fmt(d.median);
+    totalEl.textContent = d.count + (d.count === 1 ? " response" : " responses");
   }
 
   async function loadResults() {
-    const res = await fetch("/api/results");
-    render(await res.json());
+    try {
+      const res = await fetch("/api/results");
+      render(await res.json());
+    } catch {}
   }
 
-  optionsEl.addEventListener("click", async (e) => {
-    const btn = e.target.closest("button.option");
-    if (!btn) return;
-    const bucket = btn.dataset.bucket;
-    localStorage.setItem("voted", bucket);
-    const res = await fetch("/api/vote", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bucket })
-    });
-    render(await res.json());
-    showResults();
-  });
-
-  document.getElementById("reset").addEventListener("click", () => {
-    localStorage.removeItem("voted");
-    resultsEl.style.display = "none";
-    optionsEl.style.display = "flex";
-  });
-
-  if (localStorage.getItem("voted")) {
-    showResults();
+  function showResults() {
+    inputview.style.display = "none";
+    resultsEl.style.display = "block";
     loadResults();
+    if (!pollTimer) pollTimer = setInterval(loadResults, 3000);
   }
+
+  function showInput() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    resultsEl.style.display = "none";
+    inputview.style.display = "block";
+    errorEl.textContent = "";
+    valueEl.value = "";
+    valueEl.focus();
+  }
+
+  async function submit() {
+    const v = Number(valueEl.value);
+    if (valueEl.value === "" || !Number.isFinite(v) || v < 0 || v > 100) {
+      errorEl.textContent = "Please enter a number between 0 and 100.";
+      return;
+    }
+    errorEl.textContent = "";
+    try {
+      const res = await fetch("/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: v })
+      });
+      if (!res.ok) { errorEl.textContent = "Something went wrong. Try again."; return; }
+      localStorage.setItem("pdoom_voted", "1");
+      render(await res.json());
+      showResults();
+    } catch {
+      errorEl.textContent = "Network error. Try again.";
+    }
+  }
+
+  document.getElementById("submit").addEventListener("click", submit);
+  valueEl.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  document.getElementById("revote").addEventListener("click", showInput);
+
+  // QR toggle
+  document.getElementById("qrurl").textContent = window.location.origin;
+  document.getElementById("qrtoggle").addEventListener("click", () => {
+    const box = document.getElementById("qrbox");
+    const showing = box.style.display === "block";
+    box.style.display = showing ? "none" : "block";
+    document.getElementById("qrtoggle").textContent = showing ? "Show QR code to share" : "Hide QR code";
+  });
+
+  // Reset (two-click arm, no blocking dialog)
+  const resetBtn = document.getElementById("reset");
+  let armed = false, armTimer = null;
+  resetBtn.addEventListener("click", async () => {
+    if (!armed) {
+      armed = true;
+      resetBtn.textContent = "Click again to erase ALL entries";
+      resetBtn.classList.add("armed");
+      armTimer = setTimeout(() => {
+        armed = false;
+        resetBtn.textContent = "Reset all entries";
+        resetBtn.classList.remove("armed");
+      }, 4000);
+      return;
+    }
+    clearTimeout(armTimer);
+    armed = false;
+    resetBtn.textContent = "Reset all entries";
+    resetBtn.classList.remove("armed");
+    try {
+      const res = await fetch("/api/reset", { method: "POST" });
+      const d = await res.json();
+      if (resultsEl.style.display === "block") render(d);
+    } catch {}
+  });
+
+  if (localStorage.getItem("pdoom_voted")) showResults();
 </script>
 </body>
 </html>
