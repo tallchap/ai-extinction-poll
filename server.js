@@ -8,6 +8,7 @@ const DATA_DIR = process.env.RENDER_DISK_PATH || __dirname;
 const DATA_FILE = path.join(DATA_DIR, "votes.json");
 
 app.use(express.json());
+app.use("/bedtime", require("./bedtime/router.js"));  // bedtime-gym, hosted here
 app.use(express.static(path.join(__dirname, "public")));
 
 function loadEntries() {
