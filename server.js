@@ -9,6 +9,7 @@ const DATA_FILE = path.join(DATA_DIR, "votes.json");
 
 app.use(express.json());
 app.use("/bedtime", require("./bedtime/router.js"));  // bedtime-gym, hosted here
+app.use("/events", require("./events/router.js"));   // event-scout-dc, hosted here
 app.use(express.static(path.join(__dirname, "public")));
 
 function loadEntries() {

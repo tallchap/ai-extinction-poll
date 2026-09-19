@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Scout DC</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --floor: #0e0f14; --floor-glow: #1a1626;
+    --paper: #f3ebdd; --paper-edge: #e6dbc6; --ink: #221e1a; --ink-soft: #6b6152;
+    --amber: #e8a13c; --up: #3f7d4e; --down: #b3402f;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --display: "Archivo Black", system-ui, sans-serif;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    min-height: 100%; font-family: var(--body);
+    background: radial-gradient(ellipse 90% 60% at 50% -10%, var(--floor-glow), var(--floor) 70%);
+    color: var(--paper); display: flex; flex-direction: column; align-items: center;
+    padding: 0 16px 60px;
+  }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  a { color: inherit; }
+
+  header {
+    width: 100%; max-width: 940px;
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 22px 0 6px; border-bottom: 1px dashed rgba(243,235,221,.25);
+  }
+  header h1 { font-family: var(--display); font-size: 22px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); }
+  header .date { font-family: var(--mono); font-size: 13px; color: rgba(243,235,221,.7); }
+  header .spacer { flex: 1; }
+  .bar-btn {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .05em;
+    background: none; border: 1px solid rgba(243,235,221,.35); border-radius: 3px;
+    color: var(--paper); padding: 5px 12px;
+  }
+  .bar-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .bar-btn[disabled] { opacity: .4; cursor: wait; }
+
+  nav { width: 100%; max-width: 940px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px 0 4px; }
+  .chip {
+    font-family: var(--mono); font-size: 12px;
+    background: none; border: 1px solid rgba(243,235,221,.3); border-radius: 99px;
+    color: rgba(243,235,221,.75); padding: 4px 12px;
+  }
+  .chip.on { background: var(--amber); border-color: var(--amber); color: var(--ink); font-weight: 600; }
+  .chip.zero { opacity: .45; }
+  .seg { display: inline-flex; border: 1px solid rgba(243,235,221,.3); border-radius: 3px; overflow: hidden; margin-left: auto; }
+  .seg button { font-family: var(--mono); font-size: 12px; background: none; border: none; color: rgba(243,235,221,.75); padding: 4px 12px; }
+  .seg button.on { background: rgba(243,235,221,.9); color: var(--ink); font-weight: 600; }
+
+  main { width: 100%; max-width: 940px; }
+
+  /* ── shortlist (👍 picks) ── */
+  .shortlist { margin-top: 22px; }
+  .panel-head {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--amber); padding-bottom: 6px; border-bottom: 1px dashed rgba(243,235,221,.25);
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .panel-head small { letter-spacing: 0; text-transform: none; color: rgba(243,235,221,.5); }
+  .pick {
+    display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: center;
+    background: var(--paper); color: var(--ink); border-radius: 4px;
+    border-left: 5px solid var(--amber);
+    padding: 8px 12px; margin-top: 8px;
+    font-size: 14px;
+  }
+  .pick .when { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+  .pick .t a { text-decoration: none; font-weight: 600; }
+  .pick .t a:hover { color: var(--down); }
+  .pick .t small { display: block; font-family: var(--mono); font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .unvote {
+    background: none; border: 1px solid rgba(34,30,26,.3); border-radius: 3px;
+    color: var(--ink-soft); font-size: 12px; padding: 2px 8px;
+  }
+  .unvote:hover { border-color: var(--down); color: var(--down); }
+
+  /* ── program ── */
+  .program { margin-top: 30px; }
+  .day-head {
+    font-family: var(--display); font-size: 17px; letter-spacing: .03em; text-transform: uppercase;
+    color: var(--paper); margin: 30px 0 2px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--amber);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .day-head small { font-family: var(--mono); font-size: 11px; color: rgba(243,235,221,.5); text-transform: none; letter-spacing: 0; }
+  .part-head {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .25em; text-transform: uppercase;
+    color: rgba(243,235,221,.55); margin: 16px 0 2px;
+  }
+  .row {
+    display: grid; grid-template-columns: 58px 1fr auto; gap: 12px; align-items: center;
+    padding: 8px 6px; border-bottom: 1px solid rgba(243,235,221,.08);
+  }
+  .row:hover { background: rgba(243,235,221,.05); }
+  .row .time { font-family: var(--mono); font-size: 12px; color: rgba(243,235,221,.65); }
+  .row .t { font-size: 14.5px; line-height: 1.35; min-width: 0; }
+  .row .t a { color: var(--paper); text-decoration: none; }
+  .row .t a:hover { color: var(--amber); }
+  .row .t small { display: block; font-family: var(--mono); font-size: 11px; color: rgba(243,235,221,.5); margin-top: 2px; }
+  /* category badge — one per event, right before the title */
+  .cat {
+    display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    border: 1px solid var(--c, rgba(243,235,221,.35)); color: var(--c, rgba(243,235,221,.65));
+    background: color-mix(in srgb, var(--c, #f3ebdd) 12%, transparent);
+    border-radius: 2px; padding: 1px 6px; margin-right: 8px; vertical-align: 2px; white-space: nowrap;
+  }
+  .cat-swing, .cat-dance, .cat-jam, .cat-music { --c: var(--amber); }
+  .cat-jewish { --c: #6fa8e8; }
+  .cat-singles, .cat-connection, .cat-bi { --c: #e87c9a; }
+  .cat-rationalist, .cat-tech, .cat-creator { --c: #5fc9b8; }
+  .cat-books, .cat-comedy, .cat-film, .cat-arts { --c: #b79ce8; }
+  .pick .cat { --c: #8a6a2a; background: transparent; }
+  .pick .cat-jewish { --c: #2f6db3; }
+  .pick .cat-singles, .pick .cat-connection, .pick .cat-bi { --c: #b03a5c; }
+  .pick .cat-rationalist, .pick .cat-tech, .pick .cat-creator { --c: #237a6c; }
+  .pick .cat-books, .pick .cat-comedy, .pick .cat-film, .pick .cat-arts { --c: #6a4aa8; }
+  .src-mini { border: 1px solid rgba(232,161,60,.5); color: var(--amber); border-radius: 2px; padding: 0 4px; margin-right: 4px; }
+  .score-dot { color: rgba(243,235,221,.4); }
+  .row .rv { display: flex; gap: 6px; }
+  .row .rv button { background: none; border: 1px solid rgba(243,235,221,.3); border-radius: 3px; font-size: 13px; padding: 3px 8px; color: var(--paper); }
+  .row .rv button:hover.u { background: var(--up); border-color: var(--up); }
+  .row .rv button:hover.d { background: var(--down); border-color: var(--down); }
+  .more-btn {
+    font-family: var(--mono); font-size: 11.5px; background: none;
+    border: none; color: var(--amber); padding: 7px 6px; letter-spacing: .05em;
+  }
+  .more-btn:hover { text-decoration: underline; }
+
+  /* ── passed (👎) accordion ── */
+  .passed { margin-top: 44px; }
+  .passed-toggle {
+    width: 100%; text-align: left; background: none;
+    border: 1px dashed rgba(243,235,221,.3); border-radius: 4px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: .15em; text-transform: uppercase;
+    color: rgba(243,235,221,.55); padding: 10px 14px;
+  }
+  .passed-toggle:hover { color: var(--paper); }
+  .passed .row { opacity: .5; }
+  .passed .row:hover { opacity: .85; }
+
+  /* ── deck (kept as secondary view) ── */
+  .deck-area { width: min(560px, 100%); display: none; flex-direction: column; align-items: center; margin: 0 auto; }
+  .deck-area.show { display: flex; }
+  .deck-wrap { position: relative; width: 100%; margin-top: 34px; min-height: 430px; }
+  .card {
+    position: absolute; inset: 0 auto auto 0; width: 100%;
+    background: var(--paper); color: var(--ink); border-radius: 6px;
+    padding: 26px 30px 24px 46px; box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    transition: transform .35s ease, opacity .35s ease;
+  }
+  .card::before { content: ""; position: absolute; left: 15px; top: 8px; bottom: 8px; width: 0; border-left: 2px dashed rgba(34,30,26,.28); }
+  .card.behind1 { transform: translateY(14px) rotate(1.4deg) scale(.97); z-index: 1; opacity: .8; }
+  .card.behind2 { transform: translateY(26px) rotate(-1.6deg) scale(.94); z-index: 0; opacity: .5; }
+  .card.front { z-index: 2; }
+  .card.fly-right { transform: translateX(130%) rotate(14deg); opacity: 0; }
+  .card.fly-left { transform: translateX(-130%) rotate(-14deg); opacity: 0; }
+  .card.fly-down { transform: translateY(60%) scale(.8); opacity: 0; }
+  .card .admit {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
+    color: var(--ink-soft); display: flex; align-items: center; gap: 14px; padding-right: 90px;
+  }
+  .card .admit .src { letter-spacing: .1em; background: var(--ink); color: var(--paper); padding: 2px 8px; border-radius: 2px; }
+  .card h2 { font-family: var(--display); font-size: clamp(20px, 4vw, 26px); line-height: 1.15; margin: 14px 0 12px; padding-right: 72px; text-wrap: balance; }
+  .card h2 a { color: inherit; text-decoration: none; }
+  .card h2 a:hover { color: var(--down); text-decoration: underline; }
+  .card .meta { font-family: var(--mono); font-size: 13.5px; line-height: 1.9; }
+  .card .meta b { font-weight: 600; }
+  .card .summary { margin-top: 10px; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); max-height: 63px; overflow: hidden; }
+  .card .tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .card .tag { font-family: var(--mono); font-size: 11px; border: 1px solid rgba(34,30,26,.35); border-radius: 2px; padding: 1px 7px; color: var(--ink-soft); }
+  .stamp {
+    position: absolute; top: 18px; right: 20px; width: 74px; height: 74px; border-radius: 50%;
+    border: 3px double var(--amber); color: #b97f22;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: var(--mono); transform: rotate(8deg); mix-blend-mode: multiply;
+  }
+  .stamp .num { font-size: 24px; font-weight: 600; line-height: 1; }
+  .stamp .lbl { font-size: 8.5px; letter-spacing: .18em; text-transform: uppercase; }
+  .card .why { margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .card .why::before { content: "why: "; color: #b97f22; }
+  .votes { display: flex; gap: 18px; margin-top: 26px; align-items: center; justify-content: center; }
+  .vote { width: 78px; height: 78px; border-radius: 50%; border: 2px solid; background: rgba(243,235,221,.04); font-size: 30px; line-height: 1; transition: transform .12s ease; }
+  .vote:hover { transform: scale(1.1); }
+  .vote.down { border-color: var(--down); }
+  .vote.up { border-color: var(--up); }
+  .vote.skip { width: 54px; height: 54px; font-size: 18px; border-color: rgba(243,235,221,.35); color: rgba(243,235,221,.7); }
+  .keys { margin-top: 14px; font-family: var(--mono); font-size: 11px; color: rgba(243,235,221,.45); letter-spacing: .05em; text-align: center; }
+  .keys b { color: rgba(243,235,221,.8); font-weight: 500; }
+
+  .empty { margin-top: 60px; text-align: center; font-family: var(--mono); color: rgba(243,235,221,.6); font-size: 14px; line-height: 2; }
+  .empty .big { font-family: var(--display); font-size: 26px; color: var(--paper); }
+
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 12.5px;
+    padding: 9px 18px; border-radius: 4px; transition: transform .3s ease; z-index: 10;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) { .card, .toast, .vote { transition: none; } }
+  @media (max-width: 560px) {
+    .card { padding-left: 38px; }
+    .pick { grid-template-columns: 1fr auto; }
+    .pick .when { grid-column: 1 / -1; }
+    .row { grid-template-columns: 48px 1fr auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Event Scout DC</h1>
+  <span class="date" id="today"></span>
+  <span class="spacer"></span>
+  <button class="bar-btn" id="viewBtn">Deck view</button>
+  <button class="bar-btn" id="rerankBtn">Re-rank</button>
+  <button class="bar-btn" id="refreshBtn">Refresh events</button>
+</header>
+
+<nav id="filters"></nav>
+
+<main>
+  <section class="shortlist" id="shortlist"></section>
+
+  <section class="program" id="program"></section>
+
+  <div class="deck-area" id="deckArea">
+    <div class="deck-wrap" id="deck"></div>
+    <div class="votes">
+      <button class="vote down" id="btnDown" aria-label="thumbs down">👎</button>
+      <button class="vote skip" id="btnSkip" aria-label="skip">↷</button>
+      <button class="vote up" id="btnUp" aria-label="thumbs up">👍</button>
+    </div>
+    <div class="keys"><b>→</b> yes &nbsp; <b>←</b> no &nbsp; <b>↓</b> skip &nbsp; <b>U</b> undo</div>
+  </div>
+
+  <div class="empty" id="empty" style="display:none">
+    <div class="big">Nothing here</div>
+    <div>widen the filters or refresh for new events.</div>
+  </div>
+
+  <section class="passed" id="passed"></section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TAG_LABELS = {
+  rock:'rock/indie',
+  'swing-dance':'swing','blues-dance':'blues','fusion-dance':'fusion',tango:'tango',
+  'dance-lesson':'lesson','dance-other':'dance',jam:'jam','live-music':'live music',
+  beatles:'beatles','pearl-jam':'pearl jam',
+  books:'books',connection:'connection',bi:'bi+',
+  jewish:'jewish','jewish-culture':'jewish culture','jewish-scene':'jewish scene',
+  'jewish-religious':'services/shul','jewish-holiday':'holiday',singles:'singles',rationalist:'rationalist',
+  'ai-safety':'ai safety',creator:'creator/video',nightlife:'club night',tech:'tech',comedy:'comedy',
+  games:'games',social:'social',outdoors:'outdoors','food-drink':'food & drink',
+  festival:'festival',film:'film',
+};
+const PINNED_TAGS = ['rock', 'beatles', 'pearl-jam', 'ai-safety', 'creator', 'jam', 'books', 'connection', 'jewish-culture', 'jewish-scene', 'jewish', 'singles', 'bi', 'swing-dance', 'blues-dance', 'tango'];
+// One coarse category per event, assigned server-side (lib.mjs categorize) and
+// shown as the badge beside every title. Order = grouping priority in the
+// "by category" view, interest lanes first — keep in sync with CATEGORY_ORDER.
+const CAT_ORDER = ['swing', 'dance', 'jam', 'connection', 'bi', 'rationalist', 'books', 'rock', 'music', 'comedy', 'creator',
+  'singles', 'jewish', 'games', 'film', 'tech', 'festival', 'nightlife', 'arts', 'wellness', 'family', 'community',
+  'business', 'class', 'food', 'outdoors', 'social', 'other'];
+const CAT_LABELS = { rationalist: 'rationalist/AI', food: 'food & drink', bi: 'bi+', rock: 'rock/indie' };
+const catLabel = (c) => CAT_LABELS[c] || c || 'other';
+const catBadge = (e) => `<span class="cat cat-${e.category || 'other'}">${catLabel(e.category)}</span>`;
+// Server-side daily cap note for the day header: "top 80 of 143".
+const capNote = (d) => { const c = state.dayCounts[d]; return c && c.trimmed > 0 ? ` · top ${c.shown} of ${c.total}` : ''; };
+const TOP_N = 5;
+// No single source may own a collapsed block, so one firehose feed can't fill
+// a whole section on its own. Expanding shows all.
+const SRC_CAP = 2;
+
+const state = {
+  events: [], voted: {}, session: new Set(), today: '', dayCounts: {},
+  dateFilter: 'week', tagFilter: null, eveningOnly: false,
+  view: 'program', groupBy: 'day', expanded: new Set(), passedOpen: false,
+};
+
+// This page is served BOTH standalone (its own service, at /) and mounted as a page
+// on the always-on poll service (at /events). Absolute '/api/...' paths only work in
+// the first case, so derive the base from where the page itself was served.
+const API = location.pathname.replace(/\/(index\.html)?$/, '') || '';
+const api = (p) => API + p;
+const $ = (id) => document.getElementById(id);
+const fmtTime = (h) => h == null ? 'tbd' : (h % 12 || 12) + (h < 12 ? 'am' : 'pm');
+const fmtDate = (d) => new Date(d + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+// Always show the calendar date next to the relative word: "Tonight" alone is
+// ambiguous once the page has been open past midnight, and "Sunday" is ambiguous
+// in any window longer than a week.
+const dayLabel = (d) => {
+  const diff = (new Date(d + 'T12:00') - new Date(state.today + 'T12:00')) / 864e5;
+  const dow = new Date(d + 'T12:00').toLocaleDateString('en-US', { weekday: 'long' });
+  if (diff === 0) return `Tonight · ${dow} ${fmtDate(d)}`;
+  if (diff === 1) return `Tomorrow · ${dow} ${fmtDate(d)}`;
+  if (diff === 2) return `${dow} ${fmtDate(d)} · in 2 days`;
+  return `${dow} ${fmtDate(d)}`;
+};
+// Compact form for inline card chips, where the long label would wrap.
+const dayLabelShort = (d) => {
+  const diff = (new Date(d + 'T12:00') - new Date(state.today + 'T12:00')) / 864e5;
+  if (diff === 0) return `Tonight ${fmtDate(d)}`;
+  if (diff === 1) return `Tomorrow ${fmtDate(d)}`;
+  return `${new Date(d + 'T12:00').toLocaleDateString('en-US', { weekday: 'short' })} ${fmtDate(d)}`;
+};
+const daypart = (h) => h == null ? 'time tbd' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 21 ? 'evening' : 'late night';
+const PART_ORDER = ['morning', 'afternoon', 'evening', 'late night', 'time tbd'];
+const primaryTag = (e) => e.category || 'other';
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function load() {
+  const r = await fetch(api('/api/events')).then((r) => r.json());
+  state.events = r.events || [];
+  state.voted = r.voted || {};
+  state.dayCounts = r.dayCounts || {};
+  state.today = r.today || new Date().toISOString().slice(0, 10);
+  $('today').textContent = state.today;
+  render();
+}
+
+function filtered() {
+  return state.events.filter((e) => {
+    if (state.dateFilter === 'today' && e.date !== state.today) return false;
+    if (state.dateFilter === 'tomorrow') {
+      const t = new Date(state.today + 'T12:00'); t.setDate(t.getDate() + 1);
+      if (e.date !== t.toISOString().slice(0, 10)) return false;
+    }
+    if (state.tagFilter && !e.tags.includes(state.tagFilter)) return false;
+    if (state.eveningOnly && e.hour !== null && e.hour < 16) return false;
+    return true;
+  });
+}
+const unvoted = () => filtered().filter((e) => !state.voted[e.id]);
+const deckQueue = () => unvoted().filter((e) => !state.session.has(e.id));
+
+/* ── filters bar ── */
+function renderFilters() {
+  const tagsPresent = {};
+  for (const e of filtered()) for (const t of e.tags) tagsPresent[t] = (tagsPresent[t] || 0) + 1;
+  const pinned = PINNED_TAGS.map((t) => [t, tagsPresent[t] || 0]);
+  const topTags = pinned.concat(
+    Object.entries(tagsPresent).filter(([t]) => !PINNED_TAGS.includes(t)).sort((a, b) => b[1] - a[1]).slice(0, 4)
+  );
+  const dateChips = [['today', 'Tonight'], ['tomorrow', 'Tomorrow'], ['week', 'This week']]
+    .map(([v, l]) => `<button class="chip ${state.dateFilter === v ? 'on' : ''}" data-date="${v}">${l}</button>`).join('')
+    + `<button class="chip ${state.eveningOnly ? 'on' : ''}" id="eveChip">after 4pm</button>`;
+  const tagChips = topTags
+    .map(([t, n]) => `<button class="chip ${state.tagFilter === t ? 'on' : ''} ${n === 0 ? 'zero' : ''}" data-tag="${t}">${TAG_LABELS[t] || t} ${n}</button>`).join('');
+  const seg = state.view === 'program'
+    ? `<span class="seg"><button data-g="day" class="${state.groupBy === 'day' ? 'on' : ''}">by day</button><button data-g="category" class="${state.groupBy === 'category' ? 'on' : ''}">by category</button></span>`
+    : `<span class="seg" style="visibility:hidden"></span>`;
+  $('filters').innerHTML = dateChips + '<span style="width:10px"></span>' + tagChips + seg;
+  $('filters').querySelectorAll('[data-date]').forEach((b) => b.onclick = () => { state.dateFilter = b.dataset.date; render(); });
+  $('filters').querySelectorAll('[data-tag]').forEach((b) => b.onclick = () => { state.tagFilter = state.tagFilter === b.dataset.tag ? null : b.dataset.tag; render(); });
+  $('filters').querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { state.groupBy = b.dataset.g; render(); });
+  $('eveChip').onclick = () => { state.eveningOnly = !state.eveningOnly; render(); };
+}
+
+/* ── shared row ── */
+function rowHTML(e, { showDay = false } = {}) {
+  const when = showDay ? `${dayLabelShort(e.date)} ${fmtTime(e.hour)}` : fmtTime(e.hour);
+  const tags = e.tags.slice(0, 3).map((t) => TAG_LABELS[t] || t).join(' · ');
+  return `<div class="row" data-id="${e.id}">
+    <span class="time">${when}</span>
+    <span class="t">${catBadge(e)}<a href="${e.url}" target="_blank" rel="noopener">${e.title}</a>
+      <small><span class="src-mini">${e.sources.join('+')}</span>${[e.venue, e.city].filter(Boolean).join(', ')}${e.price ? ' · ' + e.price : ''}${tags ? ' · ' + tags : ''} <span class="score-dot">· ${e.score}</span></small></span>
+    <span class="rv"><button class="d" data-v="down">👎</button><button class="u" data-v="up">👍</button></span>
+  </div>`;
+}
+function wireRows(container) {
+  container.querySelectorAll('.rv button').forEach((b) => {
+    b.onclick = () => vote(b.closest('.row').dataset.id, b.dataset.v, false);
+  });
+  container.querySelectorAll('.unvote').forEach((b) => {
+    b.onclick = () => vote(b.closest('[data-id]').dataset.id, 'skip', false).then(() => toast('back in the program'));
+  });
+}
+
+/* ── shortlist ── */
+function renderShortlist() {
+  const el = $('shortlist');
+  const picks = state.events.filter((e) => state.voted[e.id] === 'up')
+    .sort((a, b) => (a.date + String(a.hour ?? 99).padStart(2, '0')).localeCompare(b.date + String(b.hour ?? 99).padStart(2, '0')));
+  if (!picks.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="panel-head">Your shortlist <small>${picks.length} picked</small></div>` +
+    picks.map((e) => `<div class="pick" data-id="${e.id}">
+      <span class="when">${dayLabelShort(e.date)} · ${fmtTime(e.hour)}</span>
+      <span class="t">${catBadge(e)}<a href="${e.url}" target="_blank" rel="noopener">${e.title}</a>
+        <small>${[e.venue, e.city].filter(Boolean).join(', ')}${e.price ? ' · ' + e.price : ''}</small></span>
+      <button class="unvote" title="remove from shortlist">×</button>
+    </div>`).join('');
+  wireRows(el);
+}
+
+/* ── program ── */
+function renderProgram() {
+  const el = $('program');
+  if (state.view !== 'program') { el.innerHTML = ''; return; }
+  const evs = unvoted();
+  $('empty').style.display = evs.length ? 'none' : 'block';
+
+  const block = (key, label, items) => {
+    const sorted = [...items].sort((a, b) => (a.hour ?? 99) - (b.hour ?? 99) || b.score - a.score);
+    const byScore = [...items].sort((a, b) => b.score - a.score);
+    const perSrc = {};
+    const picked = [];
+    for (const e of byScore) {
+      if (picked.length >= TOP_N) break;
+      const src = e.sources.join('+');
+      if ((perSrc[src] || 0) >= SRC_CAP) continue;
+      perSrc[src] = (perSrc[src] || 0) + 1;
+      picked.push(e);
+    }
+    const cut = new Set(picked.map((e) => e.id));
+    const isOpen = state.expanded.has(key);
+    const shown = isOpen ? sorted : sorted.filter((e) => cut.has(e.id));
+    const hidden = sorted.length - shown.length;
+    return `<div class="part-head">${label}</div>` +
+      shown.map((e) => rowHTML(e, { showDay: state.groupBy === 'category' })).join('') +
+      (hidden > 0 ? `<button class="more-btn" data-x="${key}">+ ${hidden} more…</button>` : '') +
+      (isOpen && sorted.length > TOP_N ? `<button class="more-btn" data-x="${key}">show fewer</button>` : '');
+  };
+
+  let html = '';
+  if (state.groupBy === 'day') {
+    const byDay = {};
+    for (const e of evs) (byDay[e.date] ??= []).push(e);
+    for (const d of Object.keys(byDay).sort()) {
+      html += `<div class="day-head"><span>${dayLabel(d)}</span><small>${byDay[d].length} events${capNote(d)}</small></div>`;
+      const byPart = {};
+      for (const e of byDay[d]) (byPart[daypart(e.hour)] ??= []).push(e);
+      for (const p of PART_ORDER) if (byPart[p]) html += block(`${d}|${p}`, p, byPart[p]);
+    }
+  } else {
+    const byCat = {};
+    for (const e of evs) (byCat[primaryTag(e)] ??= []).push(e);
+    const cats = Object.keys(byCat).sort((a, b) => {
+      const ia = CAT_ORDER.indexOf(a), ib = CAT_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    for (const c of cats) {
+      html += `<div class="day-head"><span>${catLabel(c)}</span><small>${byCat[c].length} events</small></div>`;
+      html += block(`cat|${c}`, 'this week', byCat[c].map((e) => e).sort((a, b) => a.date.localeCompare(b.date)));
+    }
+  }
+  el.innerHTML = html;
+  wireRows(el);
+  el.querySelectorAll('.more-btn').forEach((b) => b.onclick = () => {
+    const k = b.dataset.x;
+    state.expanded.has(k) ? state.expanded.delete(k) : state.expanded.add(k);
+    renderProgram();
+  });
+}
+
+/* ── passed ── */
+function renderPassed() {
+  const el = $('passed');
+  const downs = state.events.filter((e) => state.voted[e.id] === 'down')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (!downs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<button class="passed-toggle">${state.passedOpen ? '▾' : '▸'} passed — ${downs.length} events you said no to</button>` +
+    (state.passedOpen
+      ? downs.map((e) => `<div class="row" data-id="${e.id}">
+          <span class="time">${dayLabelShort(e.date)} ${fmtTime(e.hour)}</span>
+          <span class="t">${catBadge(e)}<a href="${e.url}" target="_blank" rel="noopener">${e.title}</a>
+            <small>${[e.venue, e.city].filter(Boolean).join(', ')}</small></span>
+          <button class="unvote" title="restore">×</button>
+        </div>`).join('')
+      : '');
+  el.querySelector('.passed-toggle').onclick = () => { state.passedOpen = !state.passedOpen; renderPassed(); };
+  wireRows(el);
+}
+
+/* ── deck (secondary view) ── */
+function cardHTML(e, pos) {
+  const tags = e.tags.map((t) => `<span class="tag">${TAG_LABELS[t] || t}</span>`).join('');
+  const where = [e.venue, e.city].filter(Boolean).join(', ') || 'venue tbd';
+  return `<article class="card ${pos}" data-id="${e.id}">
+    <div class="admit"><span>Admit One · No. ${e.id.slice(0, 6).toUpperCase()}</span><span class="src">${e.sources.join('+')}</span><span class="src">${catLabel(e.category)}</span></div>
+    <div class="stamp"><span class="num">${e.score}</span><span class="lbl">scout score</span></div>
+    <h2><a href="${e.url}" target="_blank" rel="noopener">${e.title}</a></h2>
+    <div class="meta"><b>${dayLabel(e.date)}</b> &nbsp;·&nbsp; doors ${fmtTime(e.hour)}${e.price ? ' · ' + e.price : ''}<br>${where}</div>
+    ${e.summary ? `<div class="summary">${e.summary}</div>` : ''}
+    <div class="tags">${tags}</div>
+    <div class="why">${e.scoreReason}</div>
+  </article>`;
+}
+function renderDeck() {
+  const show = state.view === 'deck';
+  $('deckArea').classList.toggle('show', show);
+  if (!show) return;
+  const q = deckQueue();
+  $('deck').innerHTML = q.slice(0, 3).map((e, i) => cardHTML(e, i === 0 ? 'front' : `behind${i}`)).join('');
+  $('empty').style.display = q.length ? 'none' : 'block';
+}
+
+function render() {
+  renderFilters();
+  renderShortlist();
+  renderProgram();
+  renderPassed();
+  renderDeck();
+  $('program').style.display = state.view === 'program' ? 'block' : 'none';
+}
+
+async function vote(id, kind, animate = true) {
+  const ev = state.events.find((e) => e.id === id);
+  if (!ev) return;
+  await fetch(api('/api/feedback'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, vote: kind, title: ev.title, tags: ev.tags }),
+  });
+  if (kind === 'skip') delete state.voted[id];
+  else state.voted[id] = kind;
+  state.session.add(id);
+  if (animate && state.view === 'deck') {
+    const front = $('deck').querySelector('.card.front');
+    if (front) {
+      front.classList.add(kind === 'up' ? 'fly-right' : kind === 'down' ? 'fly-left' : 'fly-down');
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  render();
+}
+function voteFront(kind) {
+  const q = deckQueue();
+  if (q.length) vote(q[0].id, kind);
+}
+async function undo() {
+  const r = await fetch(api('/api/feedback'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ undo: true }),
+  }).then((r) => r.json());
+  if (r.undone) {
+    delete state.voted[r.undone.id];
+    state.session.delete(r.undone.id);
+    toast(`undid ${r.undone.vote} on “${(r.undone.title || '').slice(0, 40)}”`);
+    render();
+  } else toast('nothing to undo');
+}
+
+$('btnUp').onclick = () => voteFront('up');
+$('btnDown').onclick = () => voteFront('down');
+$('btnSkip').onclick = () => voteFront('skip');
+$('viewBtn').onclick = () => {
+  state.view = state.view === 'program' ? 'deck' : 'program';
+  $('viewBtn').textContent = state.view === 'program' ? 'Deck view' : 'Program view';
+  render();
+};
+$('rerankBtn').onclick = async () => {
+  await fetch(api('/api/rerank'), { method: 'POST' });
+  toast('re-ranked with your votes');
+  load();
+};
+// A full crawl takes 6-10 minutes (Eventbrite's cumulative rate-limit backoff), which
+// outlives any HTTP request — so the server starts it in the background and we poll.
+// The poll also recovers the live state after a reload or on a second device.
+let refreshTimer = null;
+function setRefreshUI(st) {
+  const b = $('refreshBtn');
+  const running = st.state === 'running';
+  b.disabled = running;
+  if (running) {
+    const last = (st.log || []).filter((l) => /^\[/.test(l)).slice(-1)[0] || '';
+    const src = (last.match(/^\[([a-z]+)\]/) || [])[1];
+    const mins = st.startedAt ? Math.floor((Date.now() - new Date(st.startedAt)) / 60000) : 0;
+    b.textContent = src ? `Crawling ${src}\u2026 ${mins}m` : `Crawling\u2026 ${mins}m`;
+  } else {
+    b.textContent = 'Refresh events';
+  }
+}
+async function pollRefresh() {
+  let st;
+  try { st = await (await fetch(api('/api/refresh/status'))).json(); } catch { return; }
+  setRefreshUI(st);
+  if (st.state === 'running') return;
+  clearInterval(refreshTimer); refreshTimer = null;
+  if (st.state === 'done') { toast('fresh events pulled'); await load(); }
+  if (st.state === 'error') toast('crawl failed: ' + (st.error || 'unknown'));
+}
+function watchRefresh() {
+  if (refreshTimer) return;
+  refreshTimer = setInterval(pollRefresh, 4000);
+  pollRefresh();
+}
+$('refreshBtn').onclick = async () => {
+  setRefreshUI({ state: 'running', startedAt: Date.now(), log: [] });
+  await fetch(api('/api/refresh'), { method: 'POST' });
+  toast('crawl started \u2014 this takes a few minutes');
+  watchRefresh();
+};
+// If a crawl is already running (page reloaded, or another device kicked it off),
+// pick the progress back up instead of showing an idle button.
+fetch(api('/api/refresh/status')).then((r) => r.json()).then((st) => { if (st.state === 'running') watchRefresh(); }).catch(() => {});
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+  if (state.view !== 'deck') { if (e.key.toLowerCase() === 'u') undo(); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); voteFront('up'); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); voteFront('down'); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); voteFront('skip'); }
+  else if (e.key.toLowerCase() === 'u') undo();
+});
+
+load();
+</script>
+</body>
+</html>

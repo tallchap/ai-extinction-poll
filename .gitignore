@@ -1,3 +1,7 @@
 node_modules/
 votes.json
 .DS_Store
+
+# event-scout raw crawler output + vote log (Redis is the source of truth)
+events/data/raw/
+events/data/feedback.jsonl
